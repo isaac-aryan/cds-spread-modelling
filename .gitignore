@@ -12,3 +12,6 @@ wheels/
 
 # Specs PDF
 CDS Spread Modelling Project Specs.pdf
+
+# Environment variables
+.env
