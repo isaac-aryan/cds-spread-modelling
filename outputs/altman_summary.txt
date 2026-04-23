@@ -1,0 +1,25 @@
+ALTMAN Z-SCORE ABLATION SUMMARY
+==================================================
+
+FEATURE CONSTRUCTION
+  Formula: Z = 1.2×X1 + 1.4×X2 + 3.3×X3 + 0.6×X4 + 1.0×X5
+  X1 (WC/TA):   approximated from current_ratio + leverage_ratio
+  X2 (RE/TA):   approximated as roa × 5
+  X3 (EBIT/TA): approximated as roa
+  X4 (MktCap/Liab): (1-leverage)/leverage
+  X5 (Sales/TA): 1/debt_to_ebitda
+
+Z-SCORE DISTRIBUTION
+  Observations: 864
+  Range:  1.10 → 1.10
+  Distress zone (Z<1.81):   100%
+  Grey zone (1.81-2.99):    0%
+  Safe zone (Z≥2.99):       0%
+  Correlation with spread:  nan
+
+ABLATION RESULTS
+  Baseline                  RMSE=104.1 MAE=91.0 R²=-0.472
+  + Altman Z                RMSE=104.1 MAE=91.0 R²=-0.472
+  Z-Score, no mktcap        RMSE=104.1 MAE=91.0 R²=-0.472
+
+Verdict: Z-Score does not improve this model — report this honestly.

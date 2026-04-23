@@ -1,0 +1,55 @@
+=================================================================
+TIER 1 SVR MODEL SUMMARY
+CDS Spread Modelling — Support Vector Regression
+=================================================================
+
+DATA
+  Training period : 2018-03-31 → 2022-03-31
+  Test period     : 2022-06-30  → 2023-12-31
+  Train obs (N)   : 612
+  Test obs        : 252
+  Features (D)    : 16
+  Feature list    : ['hist_volatility', 'rating', 'hy_oas', 'ig_oas', 'risk_free', 'usd_index', 'sector_Energy', 'sector_Financials', 'sector_Healthcare', 'sector_Industrials', 'sector_Technology', 'sector_Telecom', 'region_Northeast', 'region_South', 'region_Southeast', 'region_West']
+  Train spread    : 85 – 963 bps
+  Test spread     : 196 – 802 bps
+
+MODEL SPECIFICATION
+  Algorithm       : Support Vector Regression (SVR)
+  Kernel          : RBF (Radial Basis Function)
+  Kernel formula  : K(xᵢ,xⱼ) = exp(-γ||xᵢ-xⱼ||²)
+  Implementation  : scikit-learn SVR
+
+HYPERPARAMETER TUNING
+  Method          : GridSearchCV, 5-fold KFold
+  Scoring         : neg_mean_squared_error (log-space)
+  Grid searched   : C ∈ [0.1,1,10,100,500]
+                    ε ∈ [0.01,0.05,0.1,0.2,0.5]
+                    γ ∈ ['scale',0.01,0.05,0.1,1.0]
+  Total fits      : 125 combinations × 5 folds = 625
+
+BEST HYPERPARAMETERS
+  C               = 10
+  epsilon (ε)     = 0.01
+  gamma (γ)       = 0.05
+  CV RMSE         = 0.0429 (log-space)
+
+PERFORMANCE METRICS (in basis points — back-transformed)
+  Metric         Train        Test
+  ────────────────────────────────
+  RMSE            9.9       33.3  bps
+  MAE             5.1       20.9  bps
+  R²            0.993      0.849
+
+SUPPORT VECTOR ANALYSIS
+  Total training points  : 612
+  Support vectors        : 457 (74.7%)
+  Inside ε-tube          : 155 (25.3%)
+  Interpretation         : 25.3% of training points sit within
+                           the ε=0.01 tube and contribute
+                           zero to the prediction function.
+
+OUTPUT FILES
+  outputs/plot1_pred_vs_actual.png — predicted vs actual scatter
+  outputs/plot2_residuals.png      — residual analysis (2-panel)
+  outputs/plot3_epsilon_sv.png     — ε vs support vector count
+  outputs/plot4_sv_analysis.png    — support vector breakdown
