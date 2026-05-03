@@ -99,6 +99,20 @@ def run_single_fold(X_train_fold: pd.DataFrame,
     Each fold has its own imputer, scaler, and tuning — no information
     from future folds leaks backward.
     """
+
+        # ── Fix: encode any remaining string columns before imputing ─────────────
+    # sector and region may still be raw strings if panel was saved pre-encoding.
+    # We one-hot encode here, then align columns so train and test match exactly.
+    string_cols = X_train_fold.select_dtypes(include="object").columns.tolist()
+    if string_cols:
+        X_train_fold = pd.get_dummies(X_train_fold, columns=string_cols, drop_first=True)
+        X_test_fold  = pd.get_dummies(X_test_fold,  columns=string_cols, drop_first=True)
+        # Align: test may be missing a dummy column if a category only appears in train
+        X_train_fold, X_test_fold = X_train_fold.align(
+            X_test_fold, join="left", axis=1, fill_value=0
+        )
+
+        
     # Impute
     imp = SimpleImputer(strategy="median")
     imp.fit(X_train_fold)

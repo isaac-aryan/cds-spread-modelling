@@ -1,0 +1,35 @@
+WALK-FORWARD VALIDATION SUMMARY
+==================================================
+
+METHOD: Expanding window, one fold per quarter
+Minimum training quarters: 8 (2 years)
+Total folds: 16
+Total predictions: 576
+
+OVERALL METRICS (all folds combined)
+  RMSE: 61.0 bps
+  MAE:  32.7 bps
+  R²:   0.764
+
+COMPARISON WITH SINGLE TEMPORAL SPLIT
+  Single-split RMSE: 33.3 bps
+  Walk-forward RMSE: 61.0 bps
+  Difference: +27.7 bps
+
+PER-QUARTER RESULTS
+  2020-03-31  RMSE=122.3  R²=-0.166  C=100  ε=0.01
+  2020-06-30  RMSE=161.7  R²= 0.260  C=100  ε=0.01
+  2020-09-30  RMSE= 56.8  R²= 0.877  C=100  ε=0.01
+  2020-12-31  RMSE= 84.3  R²= 0.609  C=100  ε=0.01
+  2021-03-31  RMSE= 17.3  R²= 0.979  C=100  ε=0.01
+  2021-06-30  RMSE= 10.7  R²= 0.989  C=100  ε=0.01
+  2021-09-30  RMSE= 20.7  R²= 0.964  C=100  ε=0.01
+  2021-12-31  RMSE= 13.7  R²= 0.984  C=100  ε=0.01
+  2022-03-31  RMSE= 12.0  R²= 0.984  C=100  ε=0.01
+  2022-06-30  RMSE= 52.8  R²= 0.660  C=100  ε=0.01
+  2022-09-30  RMSE= 42.6  R²= 0.844  C=100  ε=0.01
+  2022-12-31  RMSE= 31.9  R²= 0.845  C=100  ε=0.01
+  2023-03-31  RMSE= 19.9  R²= 0.947  C=100  ε=0.01
+  2023-06-30  RMSE= 17.1  R²= 0.949  C=100  ε=0.01
+  2023-09-30  RMSE= 21.1  R²= 0.927  C=100  ε=0.01
+  2023-12-31  RMSE= 14.8  R²= 0.954  C=100  ε=0.01

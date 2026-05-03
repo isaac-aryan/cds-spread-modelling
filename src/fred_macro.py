@@ -1,24 +1,4 @@
-"""
-step1_fred.py
-=============
-A guided walkthrough of fetching real macroeconomic data from the FRED API.
-
-Run this file directly:
-    python src/step1_fred.py
-
-What you need first:
-    1. Go to https://fred.stlouisfed.org/docs/api/api_key.html
-    2. Register (free, takes 2 minutes — just an email address)
-    3. Copy your API key and paste it below where it says YOUR_KEY_HERE
-       OR set it as an environment variable: export FRED_API_KEY="your_key"
-
-What this file teaches:
-    - What the FRED API is and how HTTP requests work
-    - How to parse JSON responses into pandas DataFrames
-    - What each economic series means and why we care about it
-    - How to handle missing values in real data (FRED uses "." for missing)
-    - How to resample daily data to quarterly frequency
-"""
+# STEP 1: FETCHING MACRO DATA FROM FRED
 
 import os
 import time
@@ -27,35 +7,18 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  CONFIGURATION — EDIT THIS SECTION
-# ─────────────────────────────────────────────────────────────────────────────
-
-# Paste your FRED API key here, OR set the environment variable FRED_API_KEY.
-# Never hardcode real API keys in code you share or submit — use env vars.
-# For local development, hardcoding is fine.
+# Hide API Key
 FRED_API_KEY = os.getenv("FRED_API_KEY", "c8301212a7b41dd7d7ff87d6a91acde8")
 
-# Date range for your study.
+# Date range
 # 2018–2024 is ideal: covers pre-COVID, COVID shock, and recovery.
-# This gives your model genuine variation to learn from.
 START_DATE = "2018-01-01"
 END_DATE   = "2024-01-01"
 
-# Output directory — raw data gets saved here so you don't re-download
+# Output directory
 RAW_DIR = Path(__file__).parent.parent / "data" / "raw"
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  THE SERIES WE WANT AND WHY
-# ─────────────────────────────────────────────────────────────────────────────
-#
-# FRED identifies every data series by a short code called a "series_id".
-# You can look up any series at https://fred.stlouisfed.org — search for
-# what you want and the series_id appears in the URL.
-#
-# Here is each series we use and its financial meaning:
 
 FRED_SERIES = {
 
@@ -71,14 +34,8 @@ FRED_SERIES = {
 
     "ig_oas": "BAMLC0A4CBBBEY",
     # ICE BofA BBB US Corporate Index Effective Yield — used as IG OAS proxy.
-    #
-    # WHY THIS CHANGED:
-    # The original series BAMLC0A0CM (IG OAS) intermittently returns HTTP 500
-    # errors from FRED's server — a known instability with that specific series.
     # BAMLC0A4CBBBEY is the BBB-tier effective yield, which tracks IG spreads
     # closely and is reliably available. BBB is the largest IG rating bucket.
-    # UNITS: percentage points — multiply by 100 to get bps.
-    #
     # Alternative if this also fails: "BAMLC0A0CMEY" (IG effective yield)
 
     # ── Market fear and conditions ────────────────────────────────────────────
@@ -105,55 +62,19 @@ FRED_SERIES = {
     # Measures the dollar against a basket of trading partner currencies.
     # Stronger dollar → tighter financial conditions globally → can widen
     # spreads for companies with foreign-currency revenues or debts.
-    # This is an optional feature but financially well-motivated.
 }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  CORE FUNCTION: FETCH A SINGLE SERIES FROM FRED
-# ─────────────────────────────────────────────────────────────────────────────
+def fetch_fred_series(
+    series_id: str,
+    api_key: str,
+    start: str,
+    end: str
+    ) -> pd.Series:
 
-def fetch_fred_series(series_id: str, api_key: str,
-                      start: str, end: str) -> pd.Series:
-    """
-    Fetches one time series from the FRED API and returns a pandas Series.
-
-    HOW THE API CALL WORKS:
-    -----------------------
-    We construct a URL with query parameters and send an HTTP GET request.
-    The `requests` library handles the network connection.
-
-    The FRED API returns JSON that looks like this:
-    {
-        "observations": [
-            {"date": "2018-01-02", "value": "14.87"},
-            {"date": "2018-01-03", "value": "14.61"},
-            {"date": "2018-01-04", "value": "."},   ← missing value!
-            ...
-        ]
-    }
-
-    We parse this into a pandas Series indexed by date.
-
-    PARAMETERS:
-    -----------
-    series_id : str
-        The FRED series code (e.g. "VIXCLS" for VIX)
-    api_key : str
-        Your FRED API key
-    start, end : str
-        Date strings in "YYYY-MM-DD" format
-
-    RETURNS:
-    --------
-    pd.Series with DatetimeIndex and float values
-    """
-
-    # The base URL for FRED observations
+    #Fetches one time series from the FRED API and returns a pandas Series.
     BASE_URL = "https://api.stlouisfed.org/fred/series/observations"
 
-    # Parameters are sent as query string: ?key1=val1&key2=val2
-    # requests handles the formatting for you
     params = {
         "series_id":         series_id,
         "api_key":           api_key,
@@ -164,18 +85,10 @@ def fetch_fred_series(series_id: str, api_key: str,
 
     print(f"    Requesting: {BASE_URL}?series_id={series_id}&...")
 
-    # requests.get() sends the HTTP GET request and waits for a response.
-    # timeout=30 means: if the server doesn't respond in 30 seconds, give up.
     response = requests.get(BASE_URL, params=params, timeout=30)
-
-    # raise_for_status() checks the HTTP status code.
-    # 200 = OK, 400 = bad request, 403 = forbidden (bad API key), 404 = not found
-    # If not 200, this raises an exception with the error code — much clearer
-    # than silently getting empty data.
     response.raise_for_status()
 
-    # response.json() parses the JSON text into a Python dict.
-    # We then dig into the "observations" list.
+    # Parse JSON into python dict
     observations = response.json()["observations"]
 
     print(f"    Received {len(observations)} observations")
@@ -190,64 +103,35 @@ def fetch_fred_series(series_id: str, api_key: str,
             data_dict[obs["date"]] = float(obs["value"])
 
     # Create a pandas Series from the dict.
-    # index is the dates (as strings initially), values are floats.
     series = pd.Series(data_dict, name=series_id)
-
-    # Convert the string dates to proper pandas Timestamp objects.
-    # This enables date-based operations like resampling, slicing, etc.
     series.index = pd.to_datetime(series.index)
-
-    # Sort by date (FRED should return them in order, but be safe)
     series = series.sort_index()
 
     return series
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  FETCH ALL SERIES AND COMBINE INTO A DATAFRAME
-# ─────────────────────────────────────────────────────────────────────────────
+def fetch_all_macro(
+    api_key: str,
+    start: str,
+    end: str,
+    force_refresh: bool = False
+    ) -> pd.DataFrame:
 
-def fetch_all_macro(api_key: str, start: str, end: str,
-                    force_refresh: bool = False) -> pd.DataFrame:
-    """
-    Fetches all FRED series, combines into one DataFrame, and resamples
-    to quarterly frequency.
-
-    WHY QUARTERLY?
-    --------------
-    Company financial data (balance sheets, income statements) is published
-    quarterly. If we kept macro data daily, we'd have a mismatch:
-    - 1 row of company fundamentals (leverage ratio, ROA, etc.) per quarter
-    - 65 rows of macro data (VIX, spreads) per quarter
-    Combining these doesn't make sense. So we aggregate macro to quarterly
-    by taking the mean over each quarter — this smooths out daily noise
-    and gives us one macro row per company-quarter.
-
-    CACHING:
-    --------
-    We save to CSV after downloading. On subsequent runs, we load from CSV
-    rather than hitting the API again. This is important because:
-    1. FRED has rate limits (they'll block you if you hammer them)
-    2. Your data should be reproducible — the same CSV gives the same results
-    3. It's faster — disk reads are much faster than HTTP requests
-
-    force_refresh=True will re-download even if the cache exists.
-    """
     cache_path = RAW_DIR / "macro_fred.csv"
 
+    # Getting the data from cache
     if cache_path.exists() and not force_refresh:
         print(f"  [CACHE] Loading macro data from {cache_path}")
         print(f"  (Pass force_refresh=True to re-download from FRED)")
         df = pd.read_csv(cache_path, index_col=0, parse_dates=True)
         return df
 
+    # Fetching the data from the FRED API
+
     print("  Fetching macro data from FRED API...")
     print(f"  Date range: {start} → {end}\n")
 
-    # ── Fallback series: if a primary series fails, try these alternatives ────
-    # FRED occasionally returns 500 errors for specific series even with a valid
-    # API key — it's a server-side instability, not your fault. We define
-    # fallbacks so one bad series doesn't break the whole download.
+    # Fallback series: if a primary series fails, try these alternatives 
     FALLBACKS = {
         "ig_oas": ["BAMLC0A0CMEY", "BAMLC0A4CBBBEY", "BAMLC0A0CM"],
         # BAMLC0A0CMEY = IG effective yield (closely tracks OAS)
@@ -255,22 +139,19 @@ def fetch_all_macro(api_key: str, start: str, end: str,
         # BAMLC0A0CM = original OAS series (intermittently unavailable)
     }
 
-    # ── These series are in PERCENT, need ×100 to convert to basis points ────
-    # FRED reports BofA spread series as percentage values:
-    # e.g., HY OAS = 3.5 on FRED → 3.5% → 350 basis points
-    # VIX is already in its native units (VIX points, not percent).
-    # risk_free (DGS10) is in percent — we leave it as percent (conventional).
-    # usd_index is an index level — leave as-is.
+    # These series are in PERCENT, need ×100 to convert to basis points
     MULTIPLY_BY_100 = {"hy_oas", "ig_oas"}
+
 
     all_series = {}
 
-    for friendly_name, series_id in FRED_SERIES.items():
-        print(f"  Fetching '{friendly_name}' ({series_id})...")
+    for name, series_id in FRED_SERIES.items():
+
+        print(f"  Fetching '{name}' ({series_id})...")
 
         # Build a list of series IDs to try: primary first, then fallbacks
-        ids_to_try = [series_id] + FALLBACKS.get(friendly_name, [])
-        ids_to_try = list(dict.fromkeys(ids_to_try))  # deduplicate, preserve order
+        ids_to_try = [series_id] + FALLBACKS.get(name, [])
+        ids_to_try = list(dict.fromkeys(ids_to_try))
 
         fetched = False
         for attempt_id in ids_to_try:
@@ -279,30 +160,28 @@ def fetch_all_macro(api_key: str, start: str, end: str,
             try:
                 series = fetch_fred_series(attempt_id, api_key, start, end)
 
-                # ── Units conversion ──────────────────────────────────────────
-                # BofA spread series come in percent (e.g. 3.5 = 350 bps).
-                # Multiply by 100 to work in basis points throughout.
-                if friendly_name in MULTIPLY_BY_100:
+                if name in MULTIPLY_BY_100:
                     series = series * 100
                     print(f"    (converted from % to bps: ×100)")
 
-                all_series[friendly_name] = series
+                all_series[name] = series
+
                 print(f"    ✓ {len(series)} observations | "
                       f"range: {series.min():.1f} → {series.max():.1f} | "
                       f"latest: {series.index[-1].date()}")
                 fetched = True
-                break   # success — stop trying fallbacks
+                break
 
             except requests.exceptions.HTTPError as e:
                 status = e.response.status_code if e.response is not None else "?"
                 print(f"    ✗ HTTP {status} for {attempt_id}")
                 if status == 400:
                     print(f"      Bad series ID — skipping this fallback")
-                    break   # 400 = bad request, no point retrying
+                    break 
                 elif status == 403:
                     print(f"      API key rejected. Double-check your key.")
                     break
-                # 500 = server error — try next fallback
+                
                 time.sleep(1)
 
             except requests.exceptions.ConnectionError:
@@ -313,7 +192,7 @@ def fetch_all_macro(api_key: str, start: str, end: str,
                 print(f"    ✗ Error: {e}")
 
         if not fetched:
-            print(f"    ⚠ Could not fetch '{friendly_name}' — "
+            print(f"    ⚠ Could not fetch '{name}' — "
                   f"will be missing from dataset")
 
         time.sleep(0.5)   # rate limiting between series
@@ -329,8 +208,6 @@ def fetch_all_macro(api_key: str, start: str, end: str,
     if missing:
         print(f"  Missing (will be NaN in dataset): {missing}")
 
-    # pd.DataFrame() from a dict of Series aligns them by index (date).
-    # Dates that exist in one series but not another get NaN automatically.
     df_daily = pd.DataFrame(all_series)
 
     print(f"\n  Combined daily DataFrame: {df_daily.shape}")
@@ -341,17 +218,6 @@ def fetch_all_macro(api_key: str, start: str, end: str,
         pct = n_missing / len(df_daily) * 100
         print(f"    {col}: {n_missing} ({pct:.1f}%)")
 
-    # ── Resample from daily to quarterly ─────────────────────────────────────
-    #
-    # resample("QE") groups observations by quarter-end.
-    # "QE" = quarter end: March 31, June 30, September 30, December 31.
-    # .mean() takes the average value over each quarter.
-    #
-    # Why mean and not last()?
-    # Taking the last observation (e.g. VIX on Dec 31) gives you a single
-    # snapshot that might be atypical. The mean over Q4 better represents
-    # "what conditions were like in Q4." For stress-testing you might use
-    # max() instead to capture the worst conditions in the quarter.
 
     df_quarterly = df_daily.resample("QE").mean()
 
@@ -365,20 +231,10 @@ def fetch_all_macro(api_key: str, start: str, end: str,
     return df_quarterly
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  INSPECTION HELPERS
-# ─────────────────────────────────────────────────────────────────────────────
 
 def _fmt(value, fmt: str, fallback: str = "N/A") -> str:
     """
     Safely formats a value that might be missing (NaN or the string 'N/A').
-
-    WHY THIS EXISTS:
-    ----------------
-    When a FRED series fails to download, its column is absent from the
-    DataFrame. Calling row.get('ig_oas', 'N/A') returns the STRING 'N/A',
-    not a float. Trying to format a string with :.0f (a float format code)
-    then crashes with: ValueError: Unknown format code 'f' for object of type 'str'
 
     This helper checks whether the value is actually a number before formatting.
     If it's missing or not a number, it returns the fallback string instead.
